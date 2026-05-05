@@ -14,7 +14,7 @@ const SCREENS = {
     image: "_time_of_day",
     title: "\"Funny meme haha\"",
     choices: [
-      { text: "CONSUME CONTENT", to: "_next_clarity" }
+      { text: "consume content", to: "_next_clarity" }
     ]
   },
 
@@ -55,6 +55,38 @@ const SCREENS = {
     title: "\"Holy shit these people are so dumb\"",
     choices: [
       { text: "type an angry reply", to: "_next_clarity" }
+    ]
+  },
+
+  scroll_autoplay: {
+    image: "_time_of_day",
+    title: "\"I don't even remember clicking this.\"",
+    choices: [
+      { text: "oh well", to: "_next_clarity" }
+    ]
+  },
+
+  scroll_radical: {
+    image: "_time_of_day",
+    title: "\"It's us versus them.\"",
+    choices: [
+      { text: "my opinions are my own", to: "_next_clarity" }
+    ]
+  },
+
+  scroll_eyes: {
+    image: "_time_of_day",
+    title: "\"my eyes hurt\"",
+    choices: [
+      { text: "burn them out", to: "_next_clarity" }
+    ]
+  },
+
+  scroll_meme_dark_dark: {
+    image: "_time_of_day",
+    title: "\"CONSUME CONTENT\"",
+    choices: [
+      { text: "CONSUME CONSUME", to: "_next_clarity" }
     ]
   },
 
@@ -132,6 +164,15 @@ const SCREENS = {
     ]
   },
 
+  clarity_realization: {
+    image: "_time_of_day_clarity",
+    title: "\"Holy shit it's been a while, I need to get up.\"",
+    choices: [
+      { text: "overcome", to: "_glitch_return" },
+      { text: "no", to: "_glitch_return" }
+    ]
+  },
+
   clarity_existential: {
     image: "_time_of_day_clarity",
     title: "\"What am I actually doing with my life?\"",
@@ -141,26 +182,22 @@ const SCREENS = {
     ]
   },
 
+  clarity_giveup: {
+    image: "_time_of_day_clarity",
+    title: "\"I umm... I... I... What am I doing?\"",
+    choices: [
+      { text: "give up", to: "_glitch_return" },
+      { text: "hahahaha", to: "_glitch_return" }
+    ]
+  },
+
 };
 
-const SCROLL_POOL = [
-  { id: "scroll_meme",   weight: 3 },
-  { id: "scroll_meme_dark",   weight: 1 },
-  { id: "scroll_damn",   weight: 1 },
-  { id: "scroll_news",   weight: 1 },
-  { id: "scroll_photos", weight: 1 },
-  { id: "scroll_repeat", weight: 1 },
-  { id: "scroll_argument", weight: 1 },
-];
+const PHASE1_SCROLL  = ['scroll_meme', 'scroll_news', 'scroll_photos', 'scroll_repeat', 'scroll_argument'];
+const PHASE1_CLARITY = ['clarity_call', 'clarity_project', 'clarity_clean', 'clarity_gym', 'clarity_read', 'clarity_text'];
 
-const CLARITY_POOL = [
-  { id: "clarity_call",    weight: 1 },
-  { id: "clarity_project", weight: 1 },
-  { id: "clarity_clean",   weight: 1 },
-  { id: "clarity_gym",     weight: 1 },
-  { id: "clarity_walk",     weight: 1 },
-  { id: "clarity_read",    weight: 1 },
-  { id: "clarity_text",    weight: 1 },
-  { id: "clarity_sleep",   weight: 1 },
-  { id: "clarity_existential", weight: 1 },
-];
+const PHASE2_SCROLL  = ['scroll_meme_dark', 'scroll_damn', 'scroll_autoplay', 'scroll_radical'];
+const PHASE2_CLARITY = ['clarity_sleep', 'clarity_existential', 'clarity_walk', ];
+
+const PHASE3_SCROLL  = ['scroll_meme_dark_dark', 'scroll_damn', 'scroll_autoplay'];
+const PHASE3_CLARITY = ['clarity_realization', 'clarity_existential', 'clarity_giveup'];

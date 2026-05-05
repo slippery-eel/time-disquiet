@@ -1,13 +1,46 @@
-let loopCount    = 0;
-let lastScrollId  = null;
-let lastClarityId = null;
+let loopCount     = 0;
 let eyesEl        = null;
 let clickCount    = 0;
 let eyesActive    = false;
-const eyesThreshold = 10 + Math.floor(Math.random() * 11);
 let baseImgEl     = null;
 let baseImgFn     = null;
 let currentPeriod = null;
+let phase         = 1;
+let scrollDeck    = [];
+let clarityDeck   = [];
+const _tracks     = new Map();
+let _audioStarted = false;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getPhasePools(p) {
+  if (p === 1) return { scroll: PHASE1_SCROLL,  clarity: PHASE1_CLARITY };
+  if (p === 2) return { scroll: PHASE2_SCROLL,  clarity: PHASE2_CLARITY };
+  return             { scroll: PHASE3_SCROLL,  clarity: PHASE3_CLARITY };
+}
+
+function loadPhase(p) {
+  phase = Math.min(p, 3);
+  const pools = getPhasePools(phase);
+  scrollDeck  = shuffle(pools.scroll);
+  clarityDeck = shuffle(pools.clarity);
+  if (phase === 1) {
+    scrollDeck = ['scroll_meme', ...scrollDeck.filter(id => id !== 'scroll_meme')];
+  }
+  eyesActive = phase >= 2;
+  setPhaseAudio(phase);
+}
+
+function advancePhase() { loadPhase(phase + 1); }
+
+loadPhase(1);
 
 function getPeriod() {
   const h = gameHour % 24;
@@ -48,24 +81,15 @@ function scheduleNextShudder() {
   }, 5000 + Math.random() * 3000);
 }
 
-// Weighted random pick, never repeating the last result
-function weightedPick(pool, lastId) {
-  const candidates = pool.length > 1 ? pool.filter(e => e.id !== lastId) : pool;
-  const total = candidates.reduce((sum, e) => sum + e.weight, 0);
-  let r = Math.random() * total;
-  for (const entry of candidates) {
-    r -= entry.weight;
-    if (r <= 0) return entry.id;
-  }
-  return candidates[candidates.length - 1].id;
+function pickScroll() {
+  if (scrollDeck.length === 0) advancePhase();
+  return scrollDeck.shift();
 }
 
-let firstScroll = true;
-function pickScroll() {
-  if (firstScroll) { firstScroll = false; return lastScrollId = 'scroll_meme'; }
-  return lastScrollId = weightedPick(SCROLL_POOL, lastScrollId);
+function pickClarity() {
+  if (clarityDeck.length === 0) advancePhase();
+  return clarityDeck.shift();
 }
-function pickClarity()  { return lastClarityId = weightedPick(CLARITY_POOL, lastClarityId); }
 
 // ── Glitch transition ─────────────────────────────────────────────────────────
 
@@ -131,7 +155,12 @@ function goTo(to) {
 
 // ── Renderer ──────────────────────────────────────────────────────────────────
 
+function applyPhaseStyles() {
+  document.getElementById('status-time').style.color = phase >= 3 ? '#ff2244' : '';
+}
+
 function render(screenId) {
+  applyPhaseStyles();
   const screen = SCREENS[screenId];
   if (!screen) { console.error('Missing screen:', screenId); return; }
 
@@ -183,7 +212,6 @@ function render(screenId) {
     btn.addEventListener('click', () => {
       skipRandomTime();
       clickCount++;
-      if (!eyesActive && clickCount >= eyesThreshold) eyesActive = true;
       goTo(choice.to);
     });
     choicesEl.appendChild(btn);
@@ -250,6 +278,116 @@ function scheduleTimeShudder() {
   }, 5000 + Math.random() * 7000);
 }
 
+const SUBLIMINAL_TEXTS = ['keep scrolling', "don't think", 'consume', "it's good for you"];
+
+function subliminalPos() {
+  const r = Math.random();
+  if (r < 0.4) return { top: 55 + Math.random() * 35, left: 5  + Math.random() * 40 }; // bottom-left
+  if (r < 0.7) return { top: 2  + Math.random() * 8,  left: 5  + Math.random() * 60 }; // top 10%
+  return               { top: 10 + Math.random() * 75, left: 5  + Math.random() * 60 }; // anywhere
+}
+
+function flashSubliminal() {
+  const el        = document.getElementById('subliminal');
+  const container = document.getElementById('image-area');
+  const hard      = phase >= 3;
+
+  el.textContent    = SUBLIMINAL_TEXTS[Math.floor(Math.random() * SUBLIMINAL_TEXTS.length)];
+  el.style.fontSize = hard ? '2.4rem' : '';
+  el.style.color    = hard ? '#ffffff' : '';
+
+  const cw = container.offsetWidth;
+  const ch = container.offsetHeight;
+  const maxLeft = Math.max(0, ((cw - el.offsetWidth)  / cw) * 100);
+  const maxTop  = Math.max(0, ((ch - el.offsetHeight) / ch) * 100);
+
+  const pos     = subliminalPos();
+  el.style.left = Math.min(pos.left, maxLeft) + '%';
+  el.style.top  = Math.min(pos.top,  maxTop)  + '%';
+
+  el.style.opacity = '1';
+  const cls = hard ? 'eyes-shuddering-hard' : 'eyes-shuddering';
+  el.classList.add(cls);
+  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+  setTimeout(() => { el.style.opacity = '0'; }, 300);
+}
+
+function scheduleNextSubliminal() {
+  const delay = phase >= 3 ? 1500 + Math.random() * 1500 : 3000 + Math.random() * 2000;
+  setTimeout(() => {
+    if (eyesActive) flashSubliminal();
+    scheduleNextSubliminal();
+  }, delay);
+}
+
+// ── Audio ─────────────────────────────────────────────────────────────────────
+// Edit tracks and volumes per phase here.
+
+const AUDIO_PHASES = {
+  1: [
+    { src: 'audio/underwater.mp3',    volume: 0.3 },
+    { src: 'audio/ominous_drone.wav', volume: 0.8 },
+  ],
+  2: [
+    { src: 'audio/underwater.mp3',    volume: 0.3 },
+    { src: 'audio/ominous_drone.wav', volume: 0.8 },
+  ],
+  3: [
+    { src: 'audio/underwater.mp3',    volume: 0.3 },
+    { src: 'audio/ominous_drone.wav', volume: 0.8 },
+  ],
+};
+
+function initAudio() {
+  const srcs = new Set(Object.values(AUDIO_PHASES).flat().map(t => t.src));
+  for (const src of srcs) {
+    const a = new Audio(src);
+    a.loop   = true;
+    a.volume = 0;
+    _tracks.set(src, a);
+  }
+
+  const pause = () => { if (_audioStarted) for (const a of _tracks.values()) a.pause(); };
+  const resume = () => { if (_audioStarted) for (const a of _tracks.values()) a.play(); };
+
+  document.addEventListener('visibilitychange', () => document.hidden ? pause() : resume());
+  window.addEventListener('blur',  pause);
+  window.addEventListener('focus', resume);
+}
+
+function fadeToVolumes(targets, duration) {
+  if (duration === 0) {
+    for (const [src, a] of _tracks) a.volume = targets.get(src) ?? 0;
+    return;
+  }
+  const start = performance.now();
+  const from  = new Map([..._tracks].map(([src, a]) => [src, a.volume]));
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    for (const [src, a] of _tracks) {
+      a.volume = from.get(src) + ((targets.get(src) ?? 0) - from.get(src)) * t;
+    }
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function setPhaseAudio(p, fadeDuration = 2000) {
+  if (!_audioStarted) return;
+  const config  = AUDIO_PHASES[p] || [];
+  const targets = new Map([..._tracks.keys()].map(src => [src, 0]));
+  for (const { src, volume } of config) if (targets.has(src)) targets.set(src, volume);
+  fadeToVolumes(targets, fadeDuration);
+}
+
+function startAudio() {
+  _audioStarted = true;
+  for (const a of _tracks.values()) a.play();
+  setPhaseAudio(phase, 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function skipRandomTime() {
   gameMinute += Math.floor(Math.random() * 90) + 1;
   while (gameMinute >= 60) { gameMinute -= 60; gameHour++; }
@@ -281,38 +419,47 @@ function startGameClock() {
 
 function playIntro() {
   const overlay = document.getElementById('intro-overlay');
+  const stack   = document.getElementById('intro-stack');
   const tagline = overlay.querySelector('.intro-tagline');
   const timeEl  = overlay.querySelector('.intro-time');
+  const playBtn = document.getElementById('play-btn');
 
-  // Reserve space immediately so layout is stable when tagline appears
   timeEl.textContent = formatGameTime(gameHour, gameMinute);
 
-  // Fade in tagline
+  // Stage 1: tagline fades in
   setTimeout(() => tagline.classList.add('visible'), 600);
 
-  // Fade in time, then immediately start ticking
+  // Stage 2: stack lifts, time slides up into view
   setTimeout(() => {
+    stack.classList.add('lift-1');
     timeEl.classList.add('visible');
 
     let count = 0;
-    const FADE_AT = 8;
+    const LIFT_AT = 5;
     const tick = setInterval(() => {
       tickGameTime();
       timeEl.textContent = formatGameTime(gameHour, gameMinute);
       count++;
-      if (count === FADE_AT) {
-        overlay.style.opacity = '0';
-        setTimeout(() => {
-          clearInterval(tick);
-          overlay.style.display = 'none';
-          startGameClock();
-          render(pickScroll());
-        }, 1200);
+      if (count === LIFT_AT) {
+        // Stage 3: stack lifts again, play button slides up into view
+        stack.classList.remove('lift-1');
+        stack.classList.add('lift-2');
+        playBtn.classList.add('visible');
       }
     }, 450);
   }, 2800);
+
+  playBtn.addEventListener('click', () => {
+    startAudio();
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      startGameClock();
+      render(pickScroll());
+    }, 1200);
+  }, { once: true });
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => { playIntro(); scheduleNextBlink(); scheduleNextShudder(); scheduleTimeShudder(); });
+document.addEventListener('DOMContentLoaded', () => { initAudio(); playIntro(); scheduleNextBlink(); scheduleNextShudder(); scheduleTimeShudder(); scheduleNextSubliminal(); });
