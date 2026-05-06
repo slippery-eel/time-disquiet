@@ -22,7 +22,7 @@ const SCREENS = {
     image: "_time_of_day",
     title: "\"This isn't even fun anymore.\"",
     choices: [
-      { text: "you can't stop", to: "_next_clarity" }
+      { text: "i can't stop", to: "_next_clarity" }
     ]
   },
 
@@ -90,6 +90,14 @@ const SCREENS = {
     ]
   },
 
+  scroll_scroll: {
+    image: "art/dark dark.png",
+    title: "\" ... \"",
+    choices: [
+      { text: "scroll", to: "_next_clarity" }
+    ]
+  },
+
   // ── Clarity moments ─────────────────────────────────────────────────────────
 
   clarity_call: {
@@ -115,7 +123,7 @@ const SCREENS = {
     title: "\"I was really supposed to clean my apartment today.\"",
     choices: [
       { text: "get started now", to: "_glitch_return" },
-      { text: "uhhhh", to: "_glitch_return" }
+      { text: "ughhhh", to: "_glitch_return" }
     ]
   },
 
@@ -132,8 +140,8 @@ const SCREENS = {
     image: "_time_of_day_clarity",
     title: "\"I should at least go for a walk today.\"",
     choices: [
-      { text: "go, it'll be good for me", to: "_glitch_return" },
-      { text: "I don't want to be in public right now", to: "_glitch_return" }
+      { text: "go, it'll be good for you", to: "_glitch_return" },
+      { text: "avoid being in public", to: "_glitch_return" }
     ]
   },
 
@@ -142,7 +150,7 @@ const SCREENS = {
     title: "\"I need to read this book, I've been meaning to for weeks.\"",
     choices: [
       { text: "get up and grab the book from the shelf", to: "_glitch_return" },
-      { text: "I don't really want to get up right now", to: "_glitch_return" }
+      { text: "sink deeper into bed", to: "_glitch_return" }
     ]
   },
 
@@ -151,7 +159,7 @@ const SCREENS = {
     title: "\"I should text my friend back.\"",
     choices: [
       { text: "do it right now", to: "_glitch_return" },
-      { text: "i'll respond later", to: "_glitch_return" }
+      { text: "respond later", to: "_glitch_return" }
     ]
   },
 
@@ -160,7 +168,7 @@ const SCREENS = {
     title: "\"I should really go to sleep.\"",
     choices: [
       { text: "put the phone down", to: "_glitch_return" },
-      { text: "one last scroll", to: "_glitch_return" }
+      { text: "one last video", to: "_glitch_return" }
     ]
   },
 
@@ -196,8 +204,11 @@ const SCREENS = {
 const PHASE1_SCROLL  = ['scroll_meme', 'scroll_news', 'scroll_photos', 'scroll_repeat', 'scroll_argument'];
 const PHASE1_CLARITY = ['clarity_call', 'clarity_project', 'clarity_clean', 'clarity_gym', 'clarity_read', 'clarity_text'];
 
-const PHASE2_SCROLL  = ['scroll_meme_dark', 'scroll_damn', 'scroll_autoplay', 'scroll_radical'];
+const PHASE2_SCROLL  = ['scroll_meme_dark', 'scroll_damn', 'scroll_autoplay'];
 const PHASE2_CLARITY = ['clarity_sleep', 'clarity_existential', 'clarity_walk', ];
 
-const PHASE3_SCROLL  = ['scroll_meme_dark_dark', 'scroll_damn', 'scroll_autoplay'];
+const PHASE3_SCROLL  = ['scroll_meme_dark_dark', 'scroll_eyes', 'scroll_radical'];
 const PHASE3_CLARITY = ['clarity_realization', 'clarity_existential', 'clarity_giveup'];
+
+const PHASE4_SCROLL  = ['scroll_scroll'];
+const PHASE4_CLARITY = [];

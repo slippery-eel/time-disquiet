@@ -10,6 +10,7 @@ let scrollDeck    = [];
 let clarityDeck   = [];
 const _tracks     = new Map();
 let _audioStarted = false;
+let phase4Clicks  = 0;
 
 function shuffle(arr) {
   const a = [...arr];
@@ -23,11 +24,12 @@ function shuffle(arr) {
 function getPhasePools(p) {
   if (p === 1) return { scroll: PHASE1_SCROLL,  clarity: PHASE1_CLARITY };
   if (p === 2) return { scroll: PHASE2_SCROLL,  clarity: PHASE2_CLARITY };
-  return             { scroll: PHASE3_SCROLL,  clarity: PHASE3_CLARITY };
+  if (p === 3) return { scroll: PHASE3_SCROLL,  clarity: PHASE3_CLARITY };
+  return             { scroll: PHASE4_SCROLL,  clarity: PHASE4_CLARITY };
 }
 
 function loadPhase(p) {
-  phase = Math.min(p, 3);
+  phase = Math.min(p, 4);
   const pools = getPhasePools(phase);
   scrollDeck  = shuffle(pools.scroll);
   clarityDeck = shuffle(pools.clarity);
@@ -119,6 +121,14 @@ const GLITCH_EFFECTS = [
   { cls: 'glitching-rgb',     bars: () => '' },
 ];
 
+function triggerEnding() {
+  for (const a of _tracks.values()) a.pause();
+  const phone = document.getElementById('phone');
+  phone.style.transition = 'opacity 0.8s ease';
+  phone.style.opacity    = '0';
+  setTimeout(() => location.reload(), 5000);
+}
+
 function triggerGlitch(then) {
   const phone   = document.getElementById('phone');
   const overlay = document.getElementById('glitch-overlay');
@@ -157,6 +167,7 @@ function goTo(to) {
 
 function applyPhaseStyles() {
   document.getElementById('status-time').style.color = phase >= 3 ? '#ff2244' : '';
+  document.getElementById('status-bar').style.display = phase >= 4 ? 'none' : '';
 }
 
 function render(screenId) {
@@ -183,7 +194,7 @@ function render(screenId) {
     baseImgFn     = fn;
     currentPeriod = getPeriod();
 
-    if (eyesActive) {
+    if (eyesActive && phase < 4) {
       const body = document.createElement('img');
       body.src = 'art/body.png';
       body.alt = '';
@@ -199,6 +210,14 @@ function render(screenId) {
     } else {
       eyesEl = null;
     }
+
+    if (screen.image === '_time_of_day' && phase < 4 && Math.random() < 0.5) {
+      const tiktok = document.createElement('img');
+      tiktok.src = 'art/tiktok1.png';
+      tiktok.alt = '';
+      tiktok.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;';
+      imgsEl.appendChild(tiktok);
+    }
   }
 
   let html = '';
@@ -212,6 +231,10 @@ function render(screenId) {
     btn.addEventListener('click', () => {
       skipRandomTime();
       clickCount++;
+      if (phase >= 4) {
+        phase4Clicks++;
+        if (phase4Clicks >= 25) { triggerEnding(); return; }
+      }
       goTo(choice.to);
     });
     choicesEl.appendChild(btn);
@@ -293,7 +316,7 @@ function flashSubliminal() {
   const hard      = phase >= 3;
 
   el.textContent    = SUBLIMINAL_TEXTS[Math.floor(Math.random() * SUBLIMINAL_TEXTS.length)];
-  el.style.fontSize = hard ? '2.4rem' : '';
+  el.style.fontSize = hard ? '1.2rem' : '';
   el.style.color    = hard ? '#ffffff' : '';
 
   const cw = container.offsetWidth;
@@ -305,17 +328,24 @@ function flashSubliminal() {
   el.style.left = Math.min(pos.left, maxLeft) + '%';
   el.style.top  = Math.min(pos.top,  maxTop)  + '%';
 
-  el.style.opacity = '1';
-  const cls = hard ? 'eyes-shuddering-hard' : 'eyes-shuddering';
-  el.classList.add(cls);
-  el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
-  setTimeout(() => { el.style.opacity = '0'; }, 300);
+  if (phase === 2) {
+    el.style.transition = 'opacity 1s ease';
+    el.style.opacity    = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 1000);
+  } else {
+    el.style.transition = '';
+    el.style.opacity    = '1';
+    const cls = hard ? 'eyes-shuddering-hard' : 'eyes-shuddering';
+    el.classList.add(cls);
+    el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+    setTimeout(() => { el.style.opacity = '0'; }, 300);
+  }
 }
 
 function scheduleNextSubliminal() {
   const delay = phase >= 3 ? 1500 + Math.random() * 1500 : 3000 + Math.random() * 2000;
   setTimeout(() => {
-    if (eyesActive) flashSubliminal();
+    if (eyesActive && phase < 4) flashSubliminal();
     scheduleNextSubliminal();
   }, delay);
 }
@@ -335,6 +365,10 @@ const AUDIO_PHASES = {
   3: [
     { src: 'audio/underwater.mp3',    volume: 0.3 },
     { src: 'audio/ominous_drone.wav', volume: 0.8 },
+  ],
+  4: [
+    { src: 'audio/underwater.mp3',    volume: 0.1 },
+    { src: 'audio/ominous_drone.wav', volume: 1.0 },
   ],
 };
 
