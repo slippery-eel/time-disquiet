@@ -199,16 +199,57 @@ const SCREENS = {
     ]
   },
 
+  clarity_original_thought: {
+    image: "_time_of_day_clarity",
+    title: "\"When is the last time I had an original thought?\"",
+    choices: [
+      { text: "what's the point", to: "_glitch_return" },
+      { text: "what's the point", to: "_glitch_return" }
+    ]
+  },
+
+  clarity_stop: {
+    image: "_time_of_day_clarity",
+    title: "\"NO. I NEED TO STOP.\"",
+    choices: [
+      { text: "STOP", to: "_glitch_return" }
+    ]
+  },
+
 };
 
-const PHASE1_SCROLL  = ['scroll_meme', 'scroll_news', 'scroll_photos', 'scroll_repeat', 'scroll_argument'];
-const PHASE1_CLARITY = ['clarity_call', 'clarity_project', 'clarity_clean', 'clarity_gym', 'clarity_read', 'clarity_text'];
+const PHASE1_SEQUENCE = [
+  'scroll_meme',
+  'clarity_call',
+  'scroll_news',
+  'clarity_project',
+  'scroll_photos',
+  'clarity_gym',
+  'scroll_argument',
+  'clarity_read',
+  'scroll_repeat',
+  'clarity_clean',
+];
 
-const PHASE2_SCROLL  = ['scroll_meme_dark', 'scroll_damn', 'scroll_autoplay'];
-const PHASE2_CLARITY = ['clarity_sleep', 'clarity_existential', 'clarity_walk', ];
+const PHASE2_SEQUENCE = [
+  'scroll_meme_dark',
+  'clarity_sleep',
+  'scroll_damn',
+  'clarity_existential',
+  'scroll_autoplay',
+  'clarity_walk',
+];
 
-const PHASE3_SCROLL  = ['scroll_meme_dark_dark', 'scroll_eyes', 'scroll_radical'];
-const PHASE3_CLARITY = ['clarity_realization', 'clarity_existential', 'clarity_giveup'];
+const PHASE3_SEQUENCE = [
+  'scroll_meme_dark_dark',
+  'clarity_realization',
+  'scroll_eyes',
+  'clarity_original_thought',
+  'scroll_radical',
+  'clarity_giveup',
+  'clarity_stop'
+];
 
-const PHASE4_SCROLL  = ['scroll_scroll'];
-const PHASE4_CLARITY = [];
+const PHASE4_SEQUENCE = [
+  'scroll_scroll',
+];

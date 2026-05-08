@@ -1,42 +1,34 @@
 let loopCount     = 0;
 let eyesEl        = null;
+let eyes2El       = null;
+let eyes2Active   = false;
 let clickCount    = 0;
 let eyesActive    = false;
 let baseImgEl     = null;
 let baseImgFn     = null;
 let currentPeriod = null;
 let phase         = 1;
-let scrollDeck    = [];
-let clarityDeck   = [];
+let sequenceDeck  = [];
 const _tracks     = new Map();
-let _audioStarted = false;
-let phase4Clicks  = 0;
+let _audioStarted    = false;
+let phase4Clicks     = 0;
+let phase4EyesActive = false;
 
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
+const SCREEN_OVERLAYS = ['art/tiktok1.png', 'art/youtube.png'];
+
 
 function getPhasePools(p) {
-  if (p === 1) return { scroll: PHASE1_SCROLL,  clarity: PHASE1_CLARITY };
-  if (p === 2) return { scroll: PHASE2_SCROLL,  clarity: PHASE2_CLARITY };
-  if (p === 3) return { scroll: PHASE3_SCROLL,  clarity: PHASE3_CLARITY };
-  return             { scroll: PHASE4_SCROLL,  clarity: PHASE4_CLARITY };
+  if (p === 1) return PHASE1_SEQUENCE;
+  if (p === 2) return PHASE2_SEQUENCE;
+  if (p === 3) return PHASE3_SEQUENCE;
+  return PHASE4_SEQUENCE;
 }
 
 function loadPhase(p) {
   phase = Math.min(p, 4);
-  const pools = getPhasePools(phase);
-  scrollDeck  = shuffle(pools.scroll);
-  clarityDeck = shuffle(pools.clarity);
-  if (phase === 1) {
-    scrollDeck = ['scroll_meme', ...scrollDeck.filter(id => id !== 'scroll_meme')];
-  }
+  sequenceDeck = [...getPhasePools(phase)];
   eyesActive = phase >= 2;
+  if (phase === 4) phase4EyesActive = true;
   setPhaseAudio(phase);
 }
 
@@ -60,20 +52,24 @@ function updateBaseImage() {
   }
 }
 
-function doBlink() {
+function doBlink(el) {
   const count = 1 + Math.floor(Math.random() * 3);
   let t = 0;
   for (let i = 0; i < count; i++) {
     const close = t;
     const open  = t + 110;
-    setTimeout(() => { if (eyesEl) eyesEl.style.opacity = '0'; }, close);
-    setTimeout(() => { if (eyesEl) eyesEl.style.opacity = '1'; }, open);
+    setTimeout(() => { if (el) el.style.opacity = '0'; }, close);
+    setTimeout(() => { if (el) el.style.opacity = '1'; }, open);
     t = open + 100;
   }
 }
 
 function scheduleNextBlink() {
-  setTimeout(() => { doBlink(); scheduleNextBlink(); }, 3000 + Math.random() * 2000);
+  setTimeout(() => { doBlink(eyesEl); scheduleNextBlink(); }, 3000 + Math.random() * 2000);
+}
+
+function scheduleNextBlink2() {
+  setTimeout(() => { doBlink(eyes2El); scheduleNextBlink2(); }, 3000 + Math.random() * 2000);
 }
 
 function scheduleNextShudder() {
@@ -83,14 +79,9 @@ function scheduleNextShudder() {
   }, 5000 + Math.random() * 3000);
 }
 
-function pickScroll() {
-  if (scrollDeck.length === 0) advancePhase();
-  return scrollDeck.shift();
-}
-
-function pickClarity() {
-  if (clarityDeck.length === 0) advancePhase();
-  return clarityDeck.shift();
+function pickNext() {
+  if (sequenceDeck.length === 0) advancePhase();
+  return sequenceDeck.shift();
 }
 
 // ── Glitch transition ─────────────────────────────────────────────────────────
@@ -150,14 +141,16 @@ function triggerGlitch(then) {
 
 function goTo(to) {
   if (to === '_next_clarity') {
-    render(pickClarity());
+    render(pickNext());
     return;
   }
   if (to === '_glitch_return') {
-    triggerGlitch(() => {
+    if (sequenceDeck.length === 0 && phase === 3) {
       loopCount++;
-      render(pickScroll());
-    });
+      render(pickNext());
+    } else {
+      triggerGlitch(() => { loopCount++; render(pickNext()); });
+    }
     return;
   }
   render(to);
@@ -168,9 +161,13 @@ function goTo(to) {
 function applyPhaseStyles() {
   document.getElementById('status-time').style.color = phase >= 3 ? '#ff2244' : '';
   document.getElementById('status-bar').style.display = phase >= 4 ? 'none' : '';
+  const show = phase4EyesActive ? '1' : '0';
+  document.getElementById('cannot-stop-1').style.opacity = show;
+  document.getElementById('cannot-stop-2').style.opacity = show;
 }
 
 function render(screenId) {
+  if (screenId === 'scroll_eyes') eyes2Active = true;
   applyPhaseStyles();
   const screen = SCREENS[screenId];
   if (!screen) { console.error('Missing screen:', screenId); return; }
@@ -194,7 +191,7 @@ function render(screenId) {
     baseImgFn     = fn;
     currentPeriod = getPeriod();
 
-    if (eyesActive && phase < 4) {
+    if (eyesActive && (phase < 4 || phase4EyesActive)) {
       const body = document.createElement('img');
       body.src = 'art/body.png';
       body.alt = '';
@@ -207,16 +204,48 @@ function render(screenId) {
       eyes.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;';
       imgsEl.appendChild(eyes);
       eyesEl = eyes;
+
+      if (eyes2Active) {
+        const body2 = document.createElement('img');
+        body2.src = 'art/body2.png';
+        body2.alt = '';
+        body2.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;';
+        imgsEl.appendChild(body2);
+
+        const eyes2 = document.createElement('img');
+        eyes2.src = 'art/eyes2.png';
+        eyes2.alt = '';
+        eyes2.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;';
+        imgsEl.appendChild(eyes2);
+        eyes2El = eyes2;
+      } else {
+        eyes2El = null;
+      }
     } else {
-      eyesEl = null;
+      eyesEl  = null;
+      eyes2El = null;
     }
 
-    if (screen.image === '_time_of_day' && phase < 4 && Math.random() < 0.5) {
-      const tiktok = document.createElement('img');
-      tiktok.src = 'art/tiktok1.png';
-      tiktok.alt = '';
-      tiktok.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;';
-      imgsEl.appendChild(tiktok);
+    if (screen.image === '_time_of_day' && phase < 4) {
+      const hand = document.createElement('img');
+      hand.src = 'art/phone hand.png';
+      hand.alt = '';
+      hand.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;';
+      imgsEl.appendChild(hand);
+
+      const screenImg = document.createElement('img');
+      screenImg.src = SCREEN_OVERLAYS[Math.floor(Math.random() * SCREEN_OVERLAYS.length)];
+      screenImg.alt = '';
+      screenImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;';
+      imgsEl.appendChild(screenImg);
+    }
+
+    if (phase >= 4) {
+      const hand = document.createElement('img');
+      hand.src = 'art/phone hand.png';
+      hand.alt = '';
+      hand.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;';
+      imgsEl.appendChild(hand);
     }
   }
 
@@ -233,6 +262,11 @@ function render(screenId) {
       clickCount++;
       if (phase >= 4) {
         phase4Clicks++;
+        if (phase4Clicks === 10) {
+          phase4EyesActive = false;
+          document.getElementById('cannot-stop-1').style.opacity = '0';
+          document.getElementById('cannot-stop-2').style.opacity = '0';
+        }
         if (phase4Clicks >= 25) { triggerEnding(); return; }
       }
       goTo(choice.to);
@@ -262,10 +296,10 @@ function formatGameTime(h, m) {
 
 function getTimeOfDayImage() {
   const h = gameHour % 24;
-  if (h >= 6  && h < 12) return 'art/morning phone.png';
-  if (h >= 12 && h < 17) return 'art/afternoon phone.png';
-  if (h >= 17 && h < 20) return 'art/evening phone.png';
-  return 'art/night phone.png';
+  if (h >= 6  && h < 12) return 'art/morning.png';
+  if (h >= 12 && h < 17) return 'art/afternoon.png';
+  if (h >= 17 && h < 20) return 'art/evening.png';
+  return 'art/night.png';
 }
 
 function getTimeOfDayClarityImage() {
@@ -301,7 +335,7 @@ function scheduleTimeShudder() {
   }, 5000 + Math.random() * 7000);
 }
 
-const SUBLIMINAL_TEXTS = ['keep scrolling', "don't think", 'consume', "it's good for you"];
+const SUBLIMINAL_TEXTS = ['keep scrolling', "don't think", 'consume', "it's good for you", "eat up"];
 
 function subliminalPos() {
   const r = Math.random();
@@ -348,6 +382,61 @@ function scheduleNextSubliminal() {
     if (eyesActive && phase < 4) flashSubliminal();
     scheduleNextSubliminal();
   }, delay);
+}
+
+const GLITCH_ART    = ['art/glitch1.png', 'art/glitch2.png', 'art/glitch3.png', 'art/glitch4.png', 'art/glitch5.png', 'art/youtube.png', 'art/tiktok1.png'];
+const LIGHTNING_ART = ['art/lightning1.png', 'art/lightning2.png', 'art/lightning1.png', 'art/lightning2.png', 'art/lightning3.png'];
+
+function doLightningFlash() {
+  const imgsEl = document.getElementById('screen-imgs');
+  const el     = document.createElement('img');
+  el.alt       = '';
+  el.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;z-index:1;';
+  imgsEl.appendChild(el);
+
+  // ~15% chance: single quick frame
+  if (Math.random() < 0.15) {
+    el.src = LIGHTNING_ART[Math.floor(Math.random() * LIGHTNING_ART.length)];
+    setTimeout(() => { el.remove(); scheduleLightningFlash(); }, 50);
+    return;
+  }
+
+  const totalMs = 200 + Math.random() * 550;
+  const start   = performance.now();
+  let frame = 0;
+
+  function tick() {
+    el.src = LIGHTNING_ART[Math.floor(Math.random() * LIGHTNING_ART.length)];
+    frame++;
+    if (performance.now() - start < totalMs) {
+      setTimeout(tick, 40 + Math.random() * 80);
+    } else {
+      el.remove();
+      scheduleLightningFlash();
+    }
+  }
+  tick();
+}
+
+function scheduleLightningFlash() {
+  setTimeout(() => {
+    if (phase >= 4) doLightningFlash();
+    else scheduleLightningFlash();
+  }, 800 + Math.random() * 2500);
+}
+
+function scheduleGlitchFlash() {
+  if (phase < 4) {
+    setTimeout(scheduleGlitchFlash, 200);
+    return;
+  }
+  const imgsEl = document.getElementById('screen-imgs');
+  const img    = document.createElement('img');
+  img.src      = GLITCH_ART[Math.floor(Math.random() * GLITCH_ART.length)];
+  img.alt      = '';
+  img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top;pointer-events:none;z-index:2;';
+  imgsEl.appendChild(img);
+  setTimeout(() => { img.remove(); scheduleGlitchFlash(); }, 50 + Math.random() * 50);
 }
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
@@ -433,7 +522,8 @@ function skipRandomTime() {
 }
 
 function clockDelay() {
-  return Math.max(5, 450 - clickCount * 15);
+  const base = Math.max(5, 450 - clickCount * 15);
+  return phase >= 3 ? Math.max(5, base >> 1) : base;
 }
 
 function startGameClock() {
@@ -489,11 +579,11 @@ function playIntro() {
     setTimeout(() => {
       overlay.style.display = 'none';
       startGameClock();
-      render(pickScroll());
+      render(pickNext());
     }, 1200);
   }, { once: true });
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => { initAudio(); playIntro(); scheduleNextBlink(); scheduleNextShudder(); scheduleTimeShudder(); scheduleNextSubliminal(); });
+document.addEventListener('DOMContentLoaded', () => { initAudio(); playIntro(); scheduleNextBlink(); scheduleNextBlink2(); scheduleNextShudder(); scheduleTimeShudder(); scheduleNextSubliminal(); scheduleGlitchFlash(); scheduleLightningFlash(); });
